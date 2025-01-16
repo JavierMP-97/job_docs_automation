@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% load static %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Cover Letter Generator{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div class="flex layout-container">
+        <!-- Navigation Bar -->
+        <nav class="navbar-container">
+            {% block navbar %}{% endblock %}
+        </nav>
+        
+        <!-- Content Area -->
+        <div class="content-area">
+            <header class="header">
+                <h2 class="title" id="title">CoverLetterGen</h2>
+            </header>
+            
+            <main class="main-content">
+                {% block content %}{% endblock %}
+            </main>
+            
+            <footer class="footer">
+                <div class="footer-content">
+                    <p>&copy; 2025 CoverLetterGen. Built with passion.</p>
+                </div>
+            </footer>
+        </div>
+    </div>
+    {% block extra_js %}{% endblock %}
+    <script src="{% static 'js/sidebar.js' %}"></script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Profile</title>
+</head>
+<body>
+    <h1>Profile Page</h1>
+    <form method="post">{% csrf_token %}
+        <label for="experience">Experience:</label><br>
+        <textarea name="experience" id="experience">{{ profile.experience }}</textarea><br>
+        <label for="education">Education:</label><br>
+        <textarea name="education" id="education">{{ profile.education }}</textarea><br>
+        <button type="submit">Save</button>
+    </form>
+</body>
+</html>

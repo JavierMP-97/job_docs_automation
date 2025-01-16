@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block navbar %}
+<nav class="navbar">
+    <div class="container">
+        <a href="/" class="logo">CoverLetterGen</a>
+        <ul class="nav-links">
+            <li><a href="/login/">Login</a></li>
+            <li><a href="/signup/">Sign Up</a></li>
+        </ul>
+    </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="welcome">
+    <h1>Welcome to CoverLetterGen</h1>
+    <p>Your tool for generating personalized cover letters effortlessly.</p>
+    <a href="/signup/" class="btn primary-btn">Get Started</a>
+</div>
+{% endblock %}

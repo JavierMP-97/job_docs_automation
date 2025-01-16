@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit Cover Letter</title>
+</head>
+<body>
+    <h1>Edit Cover Letter</h1>
+    <form method="post">{% csrf_token %}
+        <textarea name="content">{{ letter.content }}</textarea><br>
+        <button type="submit">Save</button>
+    </form>
+</body>
+</html>

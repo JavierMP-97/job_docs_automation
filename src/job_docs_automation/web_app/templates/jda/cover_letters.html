@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cover Letters</title>
+</head>
+<body>
+    <h1>Your Cover Letters</h1>
+    <ul>
+        {% for letter in letters %}
+            <li><a href="/cover-letters/edit/{{ letter.id }}/">{{ letter.title }}</a></li>
+        {% endfor %}
+    </ul>
+    <a href="/cover-letters/create/">Create New Cover Letter</a>
+</body>
+</html>

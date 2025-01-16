@@ -1,0 +1,57 @@
+{% extends "base_logged_in.html" %}
+
+{% block content %}
+<div class="container">
+    <h1>Generate Your Cover Letter</h1>
+
+    <!-- First Step: Input Job Description -->
+    <section id="job-description-block">
+        <h2>Step 1: Enter Job Description</h2>
+        <textarea id="job-description" rows="10" placeholder="Paste the job description here..."></textarea>
+        <p class="next-step-name">Next Step: Extract Keywords</p>
+        <div class="action-buttons">
+            <button id="next-step" class="btn primary-btn">Next</button>
+        </div>
+    </section>
+
+    <!-- Dynamic Steps Section -->
+    <div id="dynamic-steps">
+        <!-- Steps generated dynamically will appear here -->
+    </div>
+
+    <!-- Results Section -->
+    <section id="results-block" style="display: none;">
+        <h2>Final Cover Letter</h2>
+        <textarea id="final-cover-letter" rows="15" placeholder="Your generated cover letter will appear here..."></textarea>
+        <div class="action-buttons-line">
+            <button class="btn left-btn">Left</button>
+            <button class="btn retry-btn">Retry</button>
+            <button class="btn right-btn">Right</button>
+        </div>
+        <p class="next-step-name">Next Step: Review and Finalize</p>
+        <div class="action-buttons-next">
+            <button class="btn save-btn">Save</button>
+            <button class="btn download-btn">Download</button>
+        </div>
+    </section>
+
+    <!-- Generic Step Template -->
+    <template id="step-template">
+        <section class="step-block">
+            <h2 class="step-title">Step Title</h2>
+            <div class="step-content">
+                <!-- Dynamic content goes here -->
+            </div>
+            <div class="action-buttons-line">
+                <button class="btn left-btn">Left</button>
+                <button class="btn retry-btn">Retry</button>
+                <button class="btn right-btn">Right</button>
+            </div>
+            <p class="next-step-name">Name of the Following Step</p>
+            <div class="action-buttons-next">
+                <button class="btn next-btn">Next</button>
+            </div>
+        </section>
+    </template>
+</div>
+{% endblock %}

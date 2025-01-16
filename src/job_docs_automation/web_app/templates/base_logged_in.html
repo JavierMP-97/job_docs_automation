@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block navbar %}
+
+<div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <button id="sidebar-toggle" class="sidebar-toggle">☰</button>
+    </div>
+    <ul class="sidebar-links">
+        <li>
+            <a href="/" class="sidebar-link">
+                <span class="sidebar-icon">🏠</span>
+                <span class="sidebar-text">Home</span>
+            </a>
+        </li>
+        <li>
+            <a href="/profile/" class="sidebar-link">
+                <span class="sidebar-icon">👤</span>
+                <span class="sidebar-text">Profile</span>
+            </a>
+        </li>
+        <li>
+            <a href="/letters/" class="sidebar-link">
+                <span class="sidebar-icon">📄</span>
+                <span class="sidebar-text">Cover Letters</span>
+            </a>
+        </li>
+        <li>
+            <a href="/generate/" class="sidebar-link">
+                <span class="sidebar-icon">⚙️</span>
+                <span class="sidebar-text">Generate</span>
+            </a>
+        </li>
+        <li>
+            <a href="/logout/" class="sidebar-link">
+                <span class="sidebar-icon">🚪</span>
+                <span class="sidebar-text">Logout</span>
+            </a>
+        </li>
+    </ul>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Page-specific content for logged-in users -->
+{% endblock %}
+
+{% block extra_js %}
+{% endblock %}

@@ -1,16 +1,18 @@
 {% extends "base_logged_in.html" %}
 
+{% load static %}
+
 {% block content %}
 <div class="container">
     <h1>Generate Your Cover Letter</h1>
 
     <!-- First Step: Input Job Description -->
-    <section id="job-description-block">
-        <h2>Step 1: Enter Job Description</h2>
+    <section id="job-description-block" class="step-block">
+        <h2 class="step-title">Job Description</h2>
         <textarea id="job-description" rows="10" placeholder="Paste the job description here..."></textarea>
-        <p class="next-step-name">Next Step: Extract Keywords</p>
-        <div class="action-buttons">
-            <button id="next-step" class="btn primary-btn">Next</button>
+        <h2 class="next-step-name">Find Company</h2>
+        <div id="first-step" class="action-buttons-next">
+            <button class="btn next-btn">Next</button>
         </div>
     </section>
 
@@ -18,22 +20,6 @@
     <div id="dynamic-steps">
         <!-- Steps generated dynamically will appear here -->
     </div>
-
-    <!-- Results Section -->
-    <section id="results-block" style="display: none;">
-        <h2>Final Cover Letter</h2>
-        <textarea id="final-cover-letter" rows="15" placeholder="Your generated cover letter will appear here..."></textarea>
-        <div class="action-buttons-line">
-            <button class="btn left-btn">Left</button>
-            <button class="btn retry-btn">Retry</button>
-            <button class="btn right-btn">Right</button>
-        </div>
-        <p class="next-step-name">Next Step: Review and Finalize</p>
-        <div class="action-buttons-next">
-            <button class="btn save-btn">Save</button>
-            <button class="btn download-btn">Download</button>
-        </div>
-    </section>
 
     <!-- Generic Step Template -->
     <template id="step-template">
@@ -54,4 +40,8 @@
         </section>
     </template>
 </div>
+{% endblock %}
+
+{% block more_js %}
+<script src="{% static 'jda/js/scripts.js' %}"></script>
 {% endblock %}

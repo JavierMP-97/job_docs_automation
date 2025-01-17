@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 
+{% load static %}
+
 {% block navbar %}
 
 <div class="sidebar" id="sidebar">
@@ -46,4 +48,5 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% static 'js/sidebar.js' %}"></script>
 {% endblock %}

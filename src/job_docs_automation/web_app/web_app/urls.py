@@ -20,6 +20,7 @@ from apps.jda.views import (
     list_cover_letters,
     login_page,
     profile_view,
+    next_step_cover_letter,
 )
 from django.contrib import admin
 from django.urls import include, path
@@ -30,6 +31,7 @@ urlpatterns = [
     path('profile/', profile_view, name='profile'),
     path('cover-letters/', list_cover_letters, name='cover_letters'),
     path('generate_cover_letter/', generate_cover_letter, name='generate_cover_letter'),
+    path('next-step/', next_step_cover_letter, name='next_step_cover_letter'),
     path('cover-letters/edit/<int:pk>/', edit_cover_letter, name='edit_cover_letter'),
     path('login_page/', login_page, name='login_page'),
 ]

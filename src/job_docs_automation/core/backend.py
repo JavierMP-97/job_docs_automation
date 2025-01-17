@@ -2,14 +2,12 @@
 
 import os
 import re
-from typing import Dict, Match
+from typing import Dict, List, Match, Optional, Tuple
 
-from openai import OpenAI
 from docx import Document
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from docx.shared import Pt
-
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+from openai import OpenAI, api_key
 
 
 # Define function to read content from a file
@@ -29,6 +27,30 @@ def read_file(file_path: str) -> str:
     """
     with open(file_path, "r", encoding="utf-8") as file:
         return file.read()
+
+
+def read_files() -> Tuple[str, Dict[str, str], List[Tuple[str, str]]]:
+    """
+    Reads the input and prompt files and returns their content.
+
+    Returns
+    -------
+    Tuple[str, Dict[str, str], List[Tuple[str, str]]]
+        A tuple containing the initial prompt, a dictionary of input names and their content,
+        and a list of prompt names and their content.
+    """
+    # Read input and prompt names from files
+    input_names = read_file(os.path.join("inputs", "inputs.txt")).strip().split("\n")
+    prompt_names = read_file(os.path.join("inputs", "prompts.txt")).strip().split("\n")
+    initial_prompt = read_file(os.path.join("inputs", "initial_prompt.txt"))
+
+    # Load inputs dynamically
+    inputs = {name: read_file(os.path.join("inputs", f"{name}.txt")) for name in input_names}
+
+    # Load prompts dynamically
+    prompts = [(name, read_file(os.path.join("inputs", f"{name}.txt"))) for name in prompt_names]
+
+    return initial_prompt, inputs, prompts
 
 
 # Define function to replace placeholders in prompts
@@ -73,6 +95,45 @@ def replace_placeholders(text: str, replacements: Dict[str, str]) -> str:
         return replacements[key]
 
     return re.sub(r"<(\w+)>", replace_match, text)
+
+
+def execute_step(
+    step: int, initial_prompt: str, prompts: List[Tuple[str, str]], replacements: Dict[str, str]
+) -> Optional[str]:
+    """
+    Executes a step in the process of generating a motivation letter.
+
+    Parameters
+    ----------
+    step : int
+        The step
+    initial_prompt : str
+        The initial prompt for the motivation letter.
+    prompts : List[Tuple[str, str]]
+        A list of prompts to be executed
+    replacements : Dict[str, str]
+        A dictionary containing replacement values for placeholders in the prompts.
+
+    Returns
+    -------
+    Optional[str]
+        The output text for the step, or None if the call fails.
+    """
+    if step < len(prompts):
+        prompt_name, prompt_template = prompts[step]
+        api_key = os.getenv("OPENAI_API_KEY")
+        if api_key is None:
+            return None
+        output = generate_text(
+            api_key=api_key,
+            prompt=prompt_template,
+            replacements=replacements,
+            max_loops=5,
+            initial_prompt=initial_prompt,
+        )
+        replacements[prompt_name] = output
+        return output
+    return None
 
 
 # Define function to generate text using OpenAI API
@@ -121,7 +182,7 @@ def generate_text(
                 break
 
     client = OpenAI(
-        api_key=os.environ.get("OPENAI_API_KEY"),  # This is the default and can be omitted
+        api_key=api_key,  # This is the default and can be omitted
     )
     messages = []
     if initial_prompt:
@@ -177,42 +238,26 @@ def main() -> None:
     """
     Main function to generate a motivation letter based on inputs and save it to a .docx file.
     """
-    # Read input and prompt names from files
-    input_names = read_file(os.path.join("inputs", "inputs.txt")).strip().split("\n")
-    prompt_names = read_file(os.path.join("inputs", "prompts.txt")).strip().split("\n")
-    initial_prompt = read_file(os.path.join("inputs", "initial_prompt.txt"))
 
-    # Load inputs dynamically
-    inputs = {name: read_file(os.path.join("inputs", f"{name}.txt")) for name in input_names}
+    initial_prompt, inputs, prompts = read_files()
 
     # Prepare replacements dictionary
     replacements = {key: value for key, value in inputs.items()}
 
-    # Load prompts dynamically
-    prompts = [(name, read_file(os.path.join("inputs", f"{name}.txt"))) for name in prompt_names]
-
     # Sequentially generate outputs and update replacements
-    outputs = {}
-    for prompt_name, prompt_template in prompts:
-        outputs[prompt_name] = generate_text(
-            api_key="your_openai_api_key",
-            prompt=prompt_template,
-            replacements=replacements,
-            max_loops=5,
-            initial_prompt=initial_prompt,
+    for i, prompt in enumerate(prompts):
+        output = execute_step(
+            step=i, initial_prompt=initial_prompt, prompts=prompts, replacements=replacements
         )
-        replacements[prompt_name] = outputs[
-            prompt_name
-        ]  # Update replacements with the generated output
-        print(f"Input processed for {prompt_name}:\n")
-        print(f"{prompt_template}\n")
-        print(f"Generated output for {prompt_name}:\n")
-        print(f"{outputs[prompt_name]}\n\n")
+        print(f"Input processed for {prompt[0]}:\n")
+        print(f"{prompt[1]}\n")
+        print(f"Generated output for {prompt[0]}:\n")
+        print(f"{output}\n\n")
         pass
 
     # Save to .docx
     output_file = "motivation_letter.docx"
-    save_to_docx(outputs["write_motivation_letter"], output_file)
+    save_to_docx(replacements["write_motivation_letter"], output_file)
 
     print(f"Motivation letter saved to {output_file}")
 

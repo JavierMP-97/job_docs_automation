@@ -12,27 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const newSection = document.createElement('section');
             newSection.classList.add('step-block');
 
-            newSection.innerHTML = `
-                <h2 class="step-title">${data.prev_step}</h2>
-                <div class="step-content">
-                    ${data.content} <!-- Dynamic content goes here -->
-                </div>
-                <div class="action-buttons-line">
-                    <button class="btn left-btn">Left</button>
-                    <button class="btn retry-btn">Retry</button>
-                    <button class="btn right-btn">Right</button>
-                </div>
-            `;
-
-            // Check if next_step is in data
-            if (data.next_step) {
-                newSection.innerHTML += `
-                    <h2 class="next-step-name">${data.next_step}</h2>
-                    <div class="action-buttons-next">
-                        <button class="btn next-btn">Next</button>
-                    </div>
-                `;
-            }
+            newSection.innerHTML = data.content;
 
             dynamicSteps.appendChild(newSection);
         } else {
@@ -73,11 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return job_description;
     }
 
-    function nextButtonFunc(event, retry=false) {
-        // Remove previous buttons and text
-        document.querySelectorAll('.action-buttons-next, .action-buttons-line, .next-step-name').forEach(el => el.remove());
-        // Show loading animation
-        showLoadingAnimation();
+    function nextStep(event) {
         // Call the backend to get the generated text for the current step
         const dynamicSteps = document.querySelectorAll('.step-block');
         const firstStep = dynamicSteps.length === 1;
@@ -85,11 +61,63 @@ document.addEventListener('DOMContentLoaded', () => {
         if (firstStep) {
             bodyData['job_description'] = setJobDescription();
         }
-        if (retry) {
-            dynamicSteps[dynamicSteps.length - 1].remove();
-            bodyData['retry'] = true;
+        callBackendForContent(event, '/generate-step/', bodyData);
+    }
+
+    function retryStep(event) {
+        const dynamicSteps = document.querySelectorAll('.step-block');
+        dynamicSteps[dynamicSteps.length - 1].remove();
+        let bodyData = {};
+        bodyData['retry'] = true;
+        callBackendForContent(event, '/generate-step/', bodyData);
+    }
+
+    function leftStep(event) {
+        const dynamicSteps = document.querySelectorAll('.step-block');
+        dynamicSteps[dynamicSteps.length - 1].remove();
+        callBackendForContent(event, '/left-step/', {});
+    }
+
+    function rightStep(event) {
+        const dynamicSteps = document.querySelectorAll('.step-block');
+        dynamicSteps[dynamicSteps.length - 1].remove();
+        callBackendForContent(event, '/right-step/', {});
+    }
+
+    function saveStep(event) {
+        fetch('/save-step/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken') // Include CSRF token for POST request
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Create a new section dynamically
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('save-message');
+            messageDiv.innerHTML = data.success ? 'Success' : 'Error';
+            messageDiv.style.color = data.success ? 'green' : 'red';
+            dynamicSteps.appendChild(messageDiv);
+            if (data.success) {
+                alert('Step saved successfully.');
+            } else {
+                alert('Failed to save step.');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
         }
-        fetch('/next-step/', {
+        );
+    }
+
+    function callBackendForContent(event, endPoint, bodyData){
+        // Remove previous buttons and text
+        document.querySelectorAll('.action-buttons-next, .action-buttons-line, .next-step-name').forEach(el => el.remove());
+        // Show loading animation
+        showLoadingAnimation();
+        fetch(endPoint, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -102,27 +130,26 @@ document.addEventListener('DOMContentLoaded', () => {
         .catch(error => {
             hideLoadingAnimation();
             showErrorMessage();
-            console.error('Error:', error)
+            console.error('Error:', error);
         });
-    };
+    }
 
     const dynamicSteps = document.getElementById('dynamic-steps');
 
     // Event delegation for dynamically created buttons
     dynamicSteps.addEventListener('click', (event) => {
         if (event.target.matches('.next-btn')) {
-            nextButtonFunc(event);
+            nextStep(event);
         } else if (event.target.matches('.retry-btn')) {
-            nextButtonFunc(event, retry=true);
+            retryStep(event);
         } else if (event.target.matches('.left-btn')) {
-            alert('Left button clicked!');
+            leftStep(event);
         } else if (event.target.matches('.right-btn')) {
-            alert('Right button clicked!');
+            rightStep(event);
+        } else if (event.target.matches('.save-btn')) {
+            saveStep(event);
         }
     });
-
-    // Event listener for the next button
-    document.getElementById("first-step").addEventListener('click', nextButtonFunc);
 
     // Helper function to get CSRF token
     function getCookie(name) {

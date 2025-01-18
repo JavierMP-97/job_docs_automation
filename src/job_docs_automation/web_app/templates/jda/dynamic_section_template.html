@@ -1,0 +1,24 @@
+<h2 class="step-title">{{ prev_step }}</h2>
+<div class="step-content">{{ content }}</div>
+<div class="action-buttons-line">
+    {% if left_button %}
+    <button class="btn left-btn same-step-btn">Left</button>
+    {% endif %}
+    <button class="btn retry-btn same-step-btn">Retry</button>
+    {% if right_button %}
+    <button class="btn right-btn same-step-btn">Right</button>
+    {% endif %}
+</div>
+
+{% if next_step %}
+<h2 class="next-step-name">{{ next_step }}</h2>
+<div class="action-buttons-next">
+    <button class="btn next-btn">Next</button>
+</div>
+{% endif %}
+{% if not next_step %}
+<h2 class="next-step-name">Save to .docx</h2>
+<div class="action-buttons-next">
+    <button class="btn save-btn">Save</button>
+</div>
+{% endif %}

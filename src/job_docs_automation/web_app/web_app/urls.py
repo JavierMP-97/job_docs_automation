@@ -15,12 +15,15 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from apps.jda.views import (
-    edit_cover_letter,
+    left_step,
     generate_cover_letter,
     list_cover_letters,
-    login_page,
+    right_step,
     profile_view,
-    next_step_cover_letter,
+    generate_step_cover_letter,
+    edit_cover_letter,
+    login_page,
+    save_step,
 )
 from django.contrib import admin
 from django.urls import include, path
@@ -31,7 +34,10 @@ urlpatterns = [
     path('profile/', profile_view, name='profile'),
     path('cover-letters/', list_cover_letters, name='cover_letters'),
     path('generate_cover_letter/', generate_cover_letter, name='generate_cover_letter'),
-    path('next-step/', next_step_cover_letter, name='next_step_cover_letter'),
+    path('generate-step/', generate_step_cover_letter, name='generate_step_cover_letter'),
+    path('left-step/', left_step, name='left_step'),
+    path('right-step/', right_step, name='right_step'),
+    path('save-step/', save_step, name='save_step'),
     path('cover-letters/edit/<int:pk>/', edit_cover_letter, name='edit_cover_letter'),
     path('login_page/', login_page, name='login_page'),
 ]

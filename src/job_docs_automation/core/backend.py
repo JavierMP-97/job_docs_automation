@@ -9,6 +9,44 @@ from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from docx.shared import Pt
 from openai import OpenAI, api_key
 
+class Prompt:
+    name: str
+    prompt: str
+    prompt_input: str
+
+    def __init__(self, name: str, prompt: str, prompt_input: str):
+        self.name = name
+        self.prompt = prompt
+        self.prompt_input = prompt_input
+
+    def replace_input(self, replacements: Dict[str, str], max_iterations: int) -> Optional[str]:
+        """
+        Replace placeholders in the input with the corresponding values from the replacements dictionary.
+
+        Parameters
+        ----------
+        replacements : Dict[str, str]
+            A dictionary mapping keys to their replacement values.
+        max_iterations : int
+            The maximum number of iterations to replace placeholders.
+
+        Returns
+        -------
+        Optional[str]
+            The input with placeholders replaced. If the process exceeds the maximum number of iterations, returns None.
+        """
+        processed_input = self.prompt_input
+        loop_count = 0
+
+        while re.search(r"<(\w+)>", processed_input):
+            processed_input = replace_placeholders(processed_input, replacements)
+            loop_count += 1
+
+            if loop_count >= max_iterations:
+                return None
+
+        return processed_input
+
 
 # Define function to read content from a file
 def read_file(file_path: str) -> str:
@@ -29,28 +67,42 @@ def read_file(file_path: str) -> str:
         return file.read()
 
 
-def read_files() -> Tuple[str, Dict[str, str], List[Tuple[str, str]]]:
+def read_files(
+    input_filenames: str,
+    prompt_filenames: str,
+) -> Tuple[Dict[str, str], List[Prompt]]:
     """
     Reads the input and prompt files and returns their content.
 
+    Parameters
+    ----------
+    input_filenames : str
+        The path to the file containing the input filenames.
+    prompt_filenames : str
+        The path to the file containing the prompt filenames.
+
     Returns
     -------
-    Tuple[str, Dict[str, str], List[Tuple[str, str]]]
-        A tuple containing the initial prompt, a dictionary of input names and their content,
-        and a list of prompt names and their content.
+    Tuple[Dict[str, str], List[Prompt]]
+        A tuple containing a dictionary of inputs, and a list of prompts.
     """
     # Read input and prompt names from files
-    input_names = read_file(os.path.join("inputs", "inputs.txt")).strip().split("\n")
-    prompt_names = read_file(os.path.join("inputs", "prompts.txt")).strip().split("\n")
-    initial_prompt = read_file(os.path.join("inputs", "initial_prompt.txt"))
-
+    input_names = read_file(os.path.join("inputs", input_filenames)).strip().split("\n")
+    prompt_names = read_file(os.path.join("inputs", prompt_filenames)).strip().split("\n")
     # Load inputs dynamically
     inputs = {name: read_file(os.path.join("inputs", f"{name}.txt")) for name in input_names}
 
     # Load prompts dynamically
-    prompts = [(name, read_file(os.path.join("inputs", f"{name}.txt"))) for name in prompt_names]
+    prompts = [
+        Prompt(
+            name,
+            read_file(os.path.join("prompts", name, "prompt.txt")),
+            read_file(os.path.join("prompts", name, "input.txt")),
+        )
+        for name in prompt_names
+    ]
 
-    return initial_prompt, inputs, prompts
+    return inputs, prompts
 
 
 # Define function to replace placeholders in prompts
@@ -97,9 +149,7 @@ def replace_placeholders(text: str, replacements: Dict[str, str]) -> str:
     return re.sub(r"<(\w+)>", replace_match, text)
 
 
-def execute_step(
-    step: int, initial_prompt: str, prompts: List[Tuple[str, str]], replacements: Dict[str, str]
-) -> Optional[str]:
+def execute_step(step: int, prompts: List[Prompt], replacements: Dict[str, str]) -> Optional[str]:
     """
     Executes a step in the process of generating a motivation letter.
 
@@ -107,10 +157,8 @@ def execute_step(
     ----------
     step : int
         The step
-    initial_prompt : str
-        The initial prompt for the motivation letter.
-    prompts : List[Tuple[str, str]]
-        A list of prompts to be executed
+    prompts : List[Prompt]
+        A list of prompts to be processed sequentially.
     replacements : Dict[str, str]
         A dictionary containing replacement values for placeholders in the prompts.
 
@@ -120,18 +168,16 @@ def execute_step(
         The output text for the step, or None if the call fails.
     """
     if step < len(prompts):
-        prompt_name, prompt_template = prompts[step]
         api_key = os.getenv("OPENAI_API_KEY")
         if api_key is None:
             return None
         output = generate_text(
             api_key=api_key,
-            prompt=prompt_template,
+            prompt=prompts[step],
             replacements=replacements,
             max_loops=5,
-            initial_prompt=initial_prompt,
         )
-        replacements[prompt_name] = output
+        replacements[prompts[step].name] = output
         return output
     return None
 
@@ -139,10 +185,9 @@ def execute_step(
 # Define function to generate text using OpenAI API
 def generate_text(
     api_key: str,
-    prompt: str,
+    prompt: Prompt,
     replacements: Dict[str, str],
     max_loops: int = 5,
-    initial_prompt: str = "",
 ) -> str:
     """
     Generates text using OpenAI API with placeholders dynamically replaced at runtime.
@@ -151,7 +196,7 @@ def generate_text(
     ----------
     api_key : str
         The OpenAI API key.
-    prompt : str
+    prompt : Prompt
         The prompt to be processed and sent to the OpenAI API.
     replacements : Dict[str, str]
         A dictionary containing replacement values for placeholders in the prompt.
@@ -163,33 +208,19 @@ def generate_text(
     str
         The generated text from the OpenAI API.
     """
-    processed_prompt = prompt
-    loop_count = 0
-
-    while re.search(r"<(\w+)>", processed_prompt):
-        processed_prompt = replace_placeholders(processed_prompt, replacements)
-        loop_count += 1
-
-        if loop_count >= max_loops:
-            user_input = (
-                input(
-                    "The prompt still contains placeholders. Do you want to continue replacing? (yes/no): "
-                )
-                .strip()
-                .lower()
-            )
-            if user_input != "yes":
-                break
 
     client = OpenAI(
         api_key=api_key,  # This is the default and can be omitted
     )
     messages = []
-    if initial_prompt:
-        messages.append(
-            {"role": "developer", "content": [{"type": "text", "text": initial_prompt}]}
-        )
-    messages.append({"role": "user", "content": [{"type": "text", "text": processed_prompt}]})
+    if prompt:
+        messages.append({"role": "developer", "content": [{"type": "text", "text": prompt.prompt}]})
+    messages.append(
+        {
+            "role": "user",
+            "content": [{"type": "text", "text": prompt.replace_input(replacements, max_loops)}],
+        }
+    )
     response = client.chat.completions.create(
         messages=messages,
         model="gpt-4o",

@@ -1,9 +1,27 @@
-import os
-
 from openai import OpenAI
 
+client = OpenAI()
+
 META_PROMPT = """
-Given a task description or existing prompt, produce a detailed system prompt to guide a language model in completing the task effectively.
+Given a current prompt and a change description, produce a detailed system prompt to guide a language model in completing the task effectively.
+
+Your final output will be the full corrected prompt verbatim. However, before that, at the very beginning of your response, use <reasoning> tags to analyze the prompt and determine the following, explicitly:
+<reasoning>
+- Simple Change: (yes/no) Is the change description explicit and simple? (If so, skip the rest of these questions.)
+- Reasoning: (yes/no) Does the current prompt use reasoning, analysis, or chain of thought?
+    - Identify: (max 10 words) if so, which section(s) utilize reasoning?
+    - Conclusion: (yes/no) is the chain of thought used to determine a conclusion?
+    - Ordering: (before/after) is the chain of though located before or after
+- Structure: (yes/no) does the input prompt have a well defined structure
+- Examples: (yes/no) does the input prompt have few-shot examples
+    - Representative: (1-5) if present, how representative are the examples?
+- Complexity: (1-5) how complex is the input prompt?
+    - Task: (1-5) how complex is the implied task?
+    - Necessity: ()
+- Specificity: (1-5) how detailed and specific is the prompt? (not to be confused with length)
+- Prioritization: (list) what 1-3 categories are the MOST important to address.
+- Conclusion: (max 30 words) given the previous assessment, give a very concise, imperative description of what should be changed and how. this does not have to adhere strictly to only the categories listed
+</reasoning>
 
 # Guidelines
 
@@ -13,7 +31,7 @@ Given a task description or existing prompt, produce a detailed system prompt to
     - Reasoning Order: Call out reasoning portions of the prompt and conclusion parts (specific fields by name). For each, determine the ORDER in which this is done, and whether it needs to be reversed.
     - Conclusion, classifications, or results should ALWAYS appear last.
 - Examples: Include high-quality examples if helpful, using placeholders [in brackets] for complex elements.
-   - What kinds of examples may need to be included, how many, and whether they are complex enough to benefit from placeholders.
+    - What kinds of examples may need to be included, how many, and whether they are complex enough to benefit from placeholders.
 - Clarity and Conciseness: Use clear, specific language. Avoid unnecessary instructions or bland statements.
 - Formatting: Use markdown features for readability. DO NOT USE ``` CODE BLOCKS UNLESS SPECIFICALLY REQUESTED.
 - Preserve User Content: If the input task or prompt includes extensive guidelines or examples, preserve them entirely, or as closely as possible. If they are vague, consider breaking down into sub-steps. Keep any details, guidelines, examples, variables, or placeholders provided by the user.
@@ -46,12 +64,11 @@ The final prompt you output should adhere to the following structure below. Do n
 # Notes [optional]
 
 [optional: edge cases, details, and an area to call or repeat out specific important considerations]
+[NOTE: you must start with a <reasoning> section. the immediate next token you produce should be <reasoning>]
 """.strip()
 
 
-def generate_prompt(task_or_prompt_a: str):
-    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
+def generate_prompt(task_or_prompt: str):
     completion = client.chat.completions.create(
         model="gpt-4o",
         messages=[
@@ -61,17 +78,16 @@ def generate_prompt(task_or_prompt_a: str):
             },
             {
                 "role": "user",
-                "content": "Task, Goal, or Current Prompt:\n" + task_or_prompt_a,
+                "content": "Task, Goal, or Current Prompt:\n" + task_or_prompt,
             },
         ],
     )
 
     return completion.choices[0].message.content
 
-
 if __name__ == "__main__":
     task_or_prompt = """
-    Task: Write a detailed system prompt to guide a language model in completing a task effectively.
+
     """
 
     system_prompt = generate_prompt(task_or_prompt)

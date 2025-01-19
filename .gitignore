@@ -56,6 +56,7 @@ MANIFEST
 # Project specific
 inputs/*
 outputs/*
+prompts/*
 
 # Django
 src/job_docs_automation/web_app/apps/jda/migrations/*

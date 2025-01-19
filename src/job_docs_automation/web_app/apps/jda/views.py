@@ -14,7 +14,7 @@ from rest_framework.response import Response
 
 from .models import CoverLetter, Profile
 
-initial_prompt, inputs, prompts = read_files()
+inputs, prompts = read_files(input_filenames="inputs.txt", prompt_filenames="prompts_2.txt")
 
 
 def create_session(request) -> None:
@@ -115,9 +115,7 @@ def handle_cover_letter_step(request) -> Response:
     replacements = request.session["replacements"]
     current_step = request.session["current_step"]
 
-    generated_text = execute_step(
-        step=current_step, initial_prompt=initial_prompt, prompts=prompts, replacements=replacements
-    )
+    generated_text = execute_step(step=current_step, prompts=prompts, replacements=replacements)
 
     if not "retry" in request.data:
         request.session["last_step_options"] = []
@@ -187,13 +185,13 @@ def render_step_html(request: HttpRequest, content: str):
     """
 
     context = {
-        "prev_step": prompts[request.session["current_step"] - 1][0],
+        "prev_step": prompts[request.session["current_step"] - 1].name,
         "content": content,
         "left_button": request.session["current_option_idx"] > 0,
         "right_button": request.session["current_option_idx"]
         < len(request.session["last_step_options"]) - 1,
         "next_step": (
-            prompts[request.session["current_step"]][0]
+            prompts[request.session["current_step"]].name
             if request.session["current_step"] < len(prompts)
             else None
         ),

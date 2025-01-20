@@ -1,12 +1,9 @@
-from calendar import c
 import copy
-from email.policy import HTTP
 from typing import Optional
-
-from django.http import HttpRequest
 
 from backend import execute_step, read_files, save_to_docx
 from django.contrib.auth.decorators import login_required
+from django.http import HttpRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from rest_framework.decorators import api_view

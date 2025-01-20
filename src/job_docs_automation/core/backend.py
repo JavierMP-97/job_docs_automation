@@ -1,23 +1,27 @@
 """Contains the backend logic for generating a motivation letter using OpenAI API."""
 
+import json
 import os
 import re
-from typing import Dict, List, Match, Optional, Tuple
+from typing import Any, Dict, List, Match, Optional, Tuple
 
 from docx import Document
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from docx.shared import Pt
 from openai import OpenAI, api_key
 
+
 class Prompt:
     name: str
     prompt: str
     prompt_input: str
+    output_schema: Dict[str, Any]
 
-    def __init__(self, name: str, prompt: str, prompt_input: str):
+    def __init__(self, name: str, prompt: str, prompt_input: str, output_schema: Dict[str, Any]):
         self.name = name
         self.prompt = prompt
         self.prompt_input = prompt_input
+        self.output_schema = output_schema
 
     def replace_input(self, replacements: Dict[str, str], max_iterations: int) -> Optional[str]:
         """
@@ -67,6 +71,24 @@ def read_file(file_path: str) -> str:
         return file.read()
 
 
+def read_json_schema(file_path: str) -> Dict[str, Any]:
+    """
+    Reads the content of a JSON schema file and returns it as a dictionary.
+
+    Parameters
+    ----------
+    file_path : str
+        The path to the JSON schema file to be read.
+
+    Returns
+    -------
+    Dict[str, Any]
+        The JSON schema content as a dictionary.
+    """
+    with open(file_path, "r", encoding="utf-8") as file:
+        return json.load(file)
+
+
 def read_files(
     input_filenames: str,
     prompt_filenames: str,
@@ -98,6 +120,7 @@ def read_files(
             name,
             read_file(os.path.join("prompts", name, "prompt.txt")),
             read_file(os.path.join("prompts", name, "input.txt")),
+            read_json_schema(os.path.join("prompts", name, "schema.json")),
         )
         for name in prompt_names
     ]
@@ -106,16 +129,17 @@ def read_files(
 
 
 # Define function to replace placeholders in prompts
-def replace_placeholders(text: str, replacements: Dict[str, str]) -> str:
+def replace_placeholders(text: str, replacements: Dict[str, Any]) -> str:
     """
     Replaces placeholders in the text with corresponding values
-    from the replacements dictionary.
+    from the replacements dictionary, supporting nested lookups
+    and index-based access.
 
     Parameters
     ----------
     text : str
-        The input text containing placeholders in the format <key>.
-    replacements : Dict[str, str]
+        The input text containing placeholders in the format <key> or <key.subkey.index>.
+    replacements : Dict[str, Any]
         A dictionary mapping keys to their replacement values.
 
     Returns
@@ -124,10 +148,42 @@ def replace_placeholders(text: str, replacements: Dict[str, str]) -> str:
         The text with placeholders replaced.
     """
 
+    def get_nested_value(data: Any, path: list) -> Any:
+        """
+        Recursively retrieves a value from a nested structure using a list of keys/indices.
+
+        Parameters
+        ----------
+        data : Any
+            The current level of the data structure.
+        path : list
+            The remaining path of keys/indices to traverse.
+
+        Returns
+        -------
+        Any
+            The value at the specified path.
+        """
+        for key in path:
+            if isinstance(key, int):
+                assert isinstance(
+                    data, list
+                ), f"Expected list at this level, got {type(data).__name__}"
+                data = data[key]
+            else:
+                assert isinstance(
+                    data, dict
+                ), f"Expected dict at this level, got {type(data).__name__}"
+                assert key in data, f"Key '{key}' not found in dictionary"
+                data = data[key]
+        if not isinstance(data, str):
+            data = str(data)
+        return data
+
     def replace_match(match: Match[str]) -> str:
         """
         Replace a single placeholder match with the corresponding value
-        from the replacements dictionary.
+        from the replacements dictionary, supporting nested lookups.
 
         Parameters
         ----------
@@ -140,13 +196,11 @@ def replace_placeholders(text: str, replacements: Dict[str, str]) -> str:
             The replacement value for the placeholder,
             or the original placeholder if no match is found.
         """
-        key = match.group(1)
-        assert (
-            key in replacements
-        ), f"KeyError: Replacement key '{key}' not found in replacements dictionary."
-        return replacements[key]
+        key_path = match.group(1).split(".")
+        parsed_path = [int(part) if part.isdigit() else part for part in key_path]
+        return str(get_nested_value(replacements, parsed_path))
 
-    return re.sub(r"<(\w+)>", replace_match, text)
+    return re.sub(r"<(\w+(?:\.\w+)*)>", replace_match, text)
 
 
 def execute_step(step: int, prompts: List[Prompt], replacements: Dict[str, str]) -> Optional[str]:
@@ -213,7 +267,7 @@ def generate_text(
         api_key=api_key,  # This is the default and can be omitted
     )
     messages = []
-    if prompt:
+    if prompt.prompt:
         messages.append({"role": "developer", "content": [{"type": "text", "text": prompt.prompt}]})
     messages.append(
         {
@@ -224,6 +278,14 @@ def generate_text(
     response = client.chat.completions.create(
         messages=messages,
         model="gpt-4o",
+        response_format={
+            "type": "json_schema",
+            "json_schema": {
+                "name": "output",
+                "strict": True,
+                "schema": prompt.output_schema,
+            },
+        },  # type: ignore
     )
 
     response_text = (

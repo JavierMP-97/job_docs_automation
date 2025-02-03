@@ -29,6 +29,7 @@ from django.contrib import admin
 from django.urls import include, path
 
 urlpatterns = [
+    path('', generate_cover_letter, name='generate_cover_letter'),
     path('admin/', admin.site.urls),
     path('accounts/', include('allauth.urls')),  # For Google/Facebook auth
     path('profile/', profile_view, name='profile'),

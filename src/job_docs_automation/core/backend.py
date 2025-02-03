@@ -231,7 +231,7 @@ def execute_step(step: int, prompts: List[Prompt], replacements: Dict[str, str])
             replacements=replacements,
             max_loops=5,
         )
-        replacements[prompts[step].name] = output
+        replacements[prompts[step].name] = json.loads(output)
         return output
     return None
 

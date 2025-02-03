@@ -1,7 +1,8 @@
 import copy
-from typing import Optional
+import json
+from typing import Dict, List, Optional, Tuple
 
-from backend import execute_step, read_files, save_to_docx
+from backend import Prompt, execute_step, read_files, save_to_docx
 from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest
 from django.shortcuts import get_object_or_404, redirect, render
@@ -11,7 +12,9 @@ from rest_framework.response import Response
 
 from .models import CoverLetter, Profile
 
-inputs, prompts = read_files(input_filenames="inputs.txt", prompt_filenames="prompts_2.txt")
+inputs: Dict[str, str] = {}
+prompts: List[Prompt] = []
+inputs, prompts= read_files(input_filenames="inputs.txt", prompt_filenames="prompts_2.txt")
 
 
 def create_session(request) -> None:
@@ -32,7 +35,7 @@ def check_session_expired(request) -> Optional[Response]:
         return Response(data={"content": "Error: Session expired."}, status=400)
 
 
-@login_required
+# @login_required
 def profile_view(request):
     profile, _ = Profile.objects.get_or_create(user=request.user)
     if request.method == "POST":
@@ -43,7 +46,7 @@ def profile_view(request):
     return render(request, "profile.html", {"profile": profile})
 
 
-@login_required
+# @login_required
 def generate_cover_letter(request):
     create_session(request)
     if request.method == "POST":
@@ -53,13 +56,13 @@ def generate_cover_letter(request):
     return render(request, "jda/generate_cover_letter.html")
 
 
-@login_required
+# @login_required
 def list_cover_letters(request):
     letters = CoverLetter.objects.filter(user=request.user)
     return render(request, "cover_letters.html", {"letters": letters})
 
 
-@login_required
+# @login_required
 def edit_cover_letter(request, pk):
     letter = get_object_or_404(CoverLetter, id=pk, user=request.user)
     if request.method == "POST":
@@ -77,19 +80,19 @@ def login_page(request):
     return render(request, "jda/login_page.html")
 
 
-@login_required
+# @login_required
 @api_view(["POST"])
 def generate_step_cover_letter(request) -> Response:
     return handle_cover_letter_step(request)
 
 
-@login_required
+# @login_required
 @api_view(["POST"])
 def left_step(request) -> Response:
     return change_step_option(request, left=True)
 
 
-@login_required
+# @login_required
 @api_view(["POST"])
 def right_step(request) -> Response:
     return change_step_option(request, left=False)
@@ -152,9 +155,9 @@ def change_step_option(request, left: bool = False) -> Response:
         else:
             return Response({"content": "Error: How did you get here?"})
     prev_step = request.session["current_step"] - 1
-    prev_step_name = prompts[prev_step][0]
+    prev_step_name = prompts[prev_step].name
     content = request.session["last_step_options"][request.session["current_option_idx"]]
-    request.session["replacements"][prev_step_name] = content
+    request.session["replacements"][prev_step_name] = json.loads(content)
 
     response = render_step_html(
         request=request,
@@ -202,9 +205,9 @@ def save_step(request):
     session_expired = check_session_expired(request)
     if session_expired:
         return session_expired
-    last_prompt_name = prompts[request.session["current_step"] - 1][0]
+    last_prompt_name = prompts[request.session["current_step"] - 1].name
     save_to_docx(
-        content=request.session["replacements"][last_prompt_name],
+        content=request.session["replacements"][last_prompt_name]["cover_letter"],
         output_file="cover_letter.docx",
     )
     return Response({}, status=200)

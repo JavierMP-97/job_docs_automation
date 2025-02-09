@@ -1,0 +1,7 @@
+django
+django-allauth
+djangorestframework
+jwt
+openai
+python-docx
+requests

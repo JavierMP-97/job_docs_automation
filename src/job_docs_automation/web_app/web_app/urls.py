@@ -15,14 +15,14 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from apps.jda.views import (
-    left_step,
-    generate_cover_letter,
-    list_cover_letters,
-    right_step,
-    profile_view,
-    generate_step_cover_letter,
     edit_cover_letter,
+    generate_cover_letter,
+    generate_step_cover_letter,
+    left_step,
+    list_cover_letters,
     login_page,
+    profile_view,
+    right_step,
     save_step,
 )
 from django.contrib import admin

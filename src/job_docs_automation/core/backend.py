@@ -3,7 +3,7 @@
 import json
 import os
 import re
-from typing import Any, Dict, List, Match, Optional, Tuple
+from typing import Any, Dict, List, Match, Optional, Tuple, Union
 
 from docx import Document
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
@@ -23,13 +23,13 @@ class Prompt:
         self.prompt_input = prompt_input
         self.output_schema = output_schema
 
-    def replace_input(self, replacements: Dict[str, str], max_iterations: int) -> Optional[str]:
+    def replace_input(self, replacements: Dict[str, Any], max_iterations: int) -> Optional[str]:
         """
         Replace placeholders in the input with the corresponding values from the replacements dictionary.
 
         Parameters
         ----------
-        replacements : Dict[str, str]
+        replacements : Dict[str, Any]
             A dictionary mapping keys to their replacement values.
         max_iterations : int
             The maximum number of iterations to replace placeholders.
@@ -202,8 +202,24 @@ def replace_placeholders(text: str, replacements: Dict[str, Any]) -> str:
 
     return re.sub(r"<(\w+(?:\.\w+)*)>", replace_match, text)
 
+def remove_key_recursively(input_dict: Union[str, Dict[str, Any], List[Union[str, Dict[str, Any]]]], key_to_remove: str) -> None:
+    """
+    Removes a specific key recursively from a dictionary.
 
-def execute_step(step: int, prompts: List[Prompt], replacements: Dict[str, str]) -> Optional[str]:
+    Parameters
+    ----------
+    info_dict : Union[str, Dict[str, Any], List[Union[str, Dict[str, Any]]]]
+    """
+    if isinstance(input_dict, dict):
+        if key_to_remove in input_dict:
+            del input_dict[key_to_remove]
+        for key, value in input_dict.items():
+            remove_key_recursively(value, key_to_remove)
+    elif isinstance(input_dict, list):
+        for item in input_dict:
+            remove_key_recursively(item, key_to_remove)
+
+def execute_step(step: int, prompts: List[Prompt], replacements: Dict[str, Any]) -> Optional[str]:
     """
     Executes a step in the process of generating a motivation letter.
 
@@ -213,7 +229,7 @@ def execute_step(step: int, prompts: List[Prompt], replacements: Dict[str, str])
         The step
     prompts : List[Prompt]
         A list of prompts to be processed sequentially.
-    replacements : Dict[str, str]
+    replacements : Dict[str, Any]
         A dictionary containing replacement values for placeholders in the prompts.
 
     Returns
@@ -232,7 +248,8 @@ def execute_step(step: int, prompts: List[Prompt], replacements: Dict[str, str])
             max_loops=5,
         )
         replacements[prompts[step].name] = json.loads(output)
-        return output
+        remove_key_recursively(replacements[prompts[step].name], "reason")
+        return str(replacements[prompts[step].name])
     return None
 
 
@@ -240,7 +257,7 @@ def execute_step(step: int, prompts: List[Prompt], replacements: Dict[str, str])
 def generate_text(
     api_key: str,
     prompt: Prompt,
-    replacements: Dict[str, str],
+    replacements: Dict[str, Any],
     max_loops: int = 5,
 ) -> str:
     """
@@ -252,7 +269,7 @@ def generate_text(
         The OpenAI API key.
     prompt : Prompt
         The prompt to be processed and sent to the OpenAI API.
-    replacements : Dict[str, str]
+    replacements : Dict[str, Any]
         A dictionary containing replacement values for placeholders in the prompt.
     max_loops : int, optional
         The maximum number of loops to replace placeholders, by default 5.
@@ -332,7 +349,9 @@ def main() -> None:
     Main function to generate a motivation letter based on inputs and save it to a .docx file.
     """
 
-    initial_prompt, inputs, prompts = read_files()
+    inputs: Dict[str, str] = {}
+    prompts: List[Prompt] = []
+    inputs, prompts= read_files(input_filenames="inputs.txt", prompt_filenames="prompts_2.txt")
 
     # Prepare replacements dictionary
     replacements = {key: value for key, value in inputs.items()}
@@ -340,11 +359,11 @@ def main() -> None:
     # Sequentially generate outputs and update replacements
     for i, prompt in enumerate(prompts):
         output = execute_step(
-            step=i, initial_prompt=initial_prompt, prompts=prompts, replacements=replacements
+            step=i, prompts=prompts, replacements=replacements
         )
-        print(f"Input processed for {prompt[0]}:\n")
-        print(f"{prompt[1]}\n")
-        print(f"Generated output for {prompt[0]}:\n")
+        print(f"Input processed for {prompt.name}:\n")
+        print(f"{prompt.prompt}\n")
+        print(f"Generated output for {prompt.name}:\n")
         print(f"{output}\n\n")
         pass
 

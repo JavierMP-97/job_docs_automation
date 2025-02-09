@@ -199,7 +199,7 @@ def render_step_html(request: HttpRequest, content: str):
     return render_to_string("jda/dynamic_section_template.html", context)
 
 
-@login_required
+# @login_required
 @api_view(["POST"])
 def save_step(request):
     session_expired = check_session_expired(request)
